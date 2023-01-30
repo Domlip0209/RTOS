@@ -45,40 +45,37 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+static volatile uint16_t delay = 1000;
+//static uint8_t
 /* USER CODE END Variables */
-/* Definitions for UART_rx */
-osThreadId_t UART_rxHandle;
-const osThreadAttr_t UART_rx_attributes = {
-  .name = "UART_rx",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for blink */
-osThreadId_t blinkHandle;
-const osThreadAttr_t blink_attributes = {
-  .name = "blink",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for EEPROM */
-osThreadId_t EEPROMHandle;
-const osThreadAttr_t EEPROM_attributes = {
-  .name = "EEPROM",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
+osThreadId LEDHandle;
+osThreadId myTask02Handle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void RX(void *argument);
-void led_blk(void *argument);
-void R_W(void *argument);
+void blink(void const * argument);
+void StartTask02(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+
+/* GetIdleTaskMemory prototype (linked to static allocation support) */
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
+
+/* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
+static StaticTask_t xIdleTaskTCBBuffer;
+static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
+
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
+{
+  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+  *ppxIdleTaskStackBuffer = &xIdleStack[0];
+  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+  /* place for user code */
+}
+/* USER CODE END GET_IDLE_TASK_MEMORY */
 
 /**
   * @brief  FreeRTOS initialization
@@ -107,77 +104,65 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of UART_rx */
-  UART_rxHandle = osThreadNew(RX, NULL, &UART_rx_attributes);
+  /* definition and creation of LED */
+  osThreadDef(LED, blink, osPriorityNormal, 0, 128);
+  LEDHandle = osThreadCreate(osThread(LED), NULL);
 
-  /* creation of blink */
-  blinkHandle = osThreadNew(led_blk, NULL, &blink_attributes);
-
-  /* creation of EEPROM */
-  EEPROMHandle = osThreadNew(R_W, NULL, &EEPROM_attributes);
+  /* definition and creation of myTask02 */
+  osThreadDef(myTask02, StartTask02, osPriorityIdle, 0, 128);
+  myTask02Handle = osThreadCreate(osThread(myTask02), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
-
 }
 
-/* USER CODE BEGIN Header_RX */
+/* USER CODE BEGIN Header_blink */
 /**
-  * @brief  Function implementing the UART_rx thread.
+  * @brief  Function implementing the LED thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_RX */
-void RX(void *argument)
+/* USER CODE END Header_blink */
+void blink(void const * argument)
 {
-  /* USER CODE BEGIN RX */
+  /* USER CODE BEGIN blink */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  osDelay(delay);
   }
-  /* USER CODE END RX */
+  /* USER CODE END blink */
 }
 
-/* USER CODE BEGIN Header_led_blk */
+/* USER CODE BEGIN Header_StartTask02 */
 /**
-* @brief Function implementing the blink thread.
+* @brief Function implementing the myTask02 thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_led_blk */
-void led_blk(void *argument)
+/* USER CODE END Header_StartTask02 */
+void StartTask02(void const * argument)
 {
-  /* USER CODE BEGIN led_blk */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END led_blk */
-}
+  /* USER CODE BEGIN StartTask02 */
+	static char init[] = "Start of the program, the delay is 1s";
+	uint8_t buf_len = 0xFF;
+	char buff[buf_len];
 
-/* USER CODE BEGIN Header_R_W */
-/**
-* @brief Function implementing the EEPROM thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_R_W */
-void R_W(void *argument)
-{
-  /* USER CODE BEGIN R_W */
+	HAL_UART_Transmit(&huart2, (uint8_t*) &init, sizeof(init), 500);
+
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
-  }
-  /* USER CODE END R_W */
+	  if(HAL_UART_Receive_IT(&huart2, (uint8_t*) &buff, buf_len) == HAL_OK)
+	  {
+		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  }
+			  osDelay(1000);
+
+  /* USER CODE END StartTask02 */
 }
 
 /* Private application code --------------------------------------------------*/
