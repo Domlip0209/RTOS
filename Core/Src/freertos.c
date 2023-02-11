@@ -46,10 +46,13 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 static volatile uint16_t delay = 1000;
-//static uint8_t
+static const uint8_t len = 0xFF;
+static volatile char buff[len];
 /* USER CODE END Variables */
 osThreadId LEDHandle;
-osThreadId myTask02Handle;
+osThreadId UART_RxHandle;
+osThreadId UART_TxHandle;
+osMessageQId QueueUARTHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -57,7 +60,8 @@ osThreadId myTask02Handle;
 /* USER CODE END FunctionPrototypes */
 
 void blink(void const * argument);
-void StartTask02(void const * argument);
+void Rx(void const * argument);
+void Tx(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -99,6 +103,11 @@ void MX_FREERTOS_Init(void) {
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* definition and creation of QueueUART */
+  osMessageQDef(QueueUART, 16, uint16_t);
+  QueueUARTHandle = osMessageCreate(osMessageQ(QueueUART), NULL);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -108,9 +117,13 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(LED, blink, osPriorityNormal, 0, 128);
   LEDHandle = osThreadCreate(osThread(LED), NULL);
 
-  /* definition and creation of myTask02 */
-  osThreadDef(myTask02, StartTask02, osPriorityIdle, 0, 128);
-  myTask02Handle = osThreadCreate(osThread(myTask02), NULL);
+  /* definition and creation of UART_Rx */
+  osThreadDef(UART_Rx, Rx, osPriorityIdle, 0, 128);
+  UART_RxHandle = osThreadCreate(osThread(UART_Rx), NULL);
+
+  /* definition and creation of UART_Tx */
+  osThreadDef(UART_Tx, Tx, osPriorityIdle, 0, 128);
+  UART_TxHandle = osThreadCreate(osThread(UART_Tx), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -137,32 +150,57 @@ void blink(void const * argument)
   /* USER CODE END blink */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
+/* USER CODE BEGIN Header_Rx */
 /**
-* @brief Function implementing the myTask02 thread.
+* @brief Function implementing the UART_Rx thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void const * argument)
+/* USER CODE END Header_Rx */
+void Rx(void const * argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-	static char init[] = "Start of the program, the delay is 1s";
-	uint8_t buf_len = 0xFF;
-	char buff[buf_len];
-
-	HAL_UART_Transmit(&huart2, (uint8_t*) &init, sizeof(init), 500);
-
+  /* USER CODE BEGIN Rx */
+	char c;
+	memset(buf, 0, len);
   /* Infinite loop */
   for(;;)
   {
-	  if(HAL_UART_Receive_IT(&huart2, (uint8_t*) &buff, buf_len) == HAL_OK)
-	  {
-		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  //if something is on the UART RX you send it to Queue
+	  if(a==b){
+		  if (xQueueSend(QueueUARTHandle, (void *)&buff, 10) != pdTRUE) {
+		              printf("ERROR: Could not put item on delay queue.");
+		            }
+	  memset(buf, 0, len);
 	  }
-			  osDelay(1000);
+	  else{
+		  printf("%c", c);
+	  }
+    osDelay(1);
+  }
+  /* USER CODE END Rx */
+}
 
-  /* USER CODE END StartTask02 */
+/* USER CODE BEGIN Header_Tx */
+/**
+* @brief Function implementing the UART_Tx thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Tx */
+void Tx(void const * argument)
+{
+  /* USER CODE BEGIN Tx */
+  /* Infinite loop */
+  for(;;)
+  {
+	  if(xQueueReceive(&QueueUARTHandle, (void *)&buff, 0) == pdTRUE){
+		  delay = &buff;
+		  printf("Delay wynosi aktualnie %d\n", (int *)&buff);
+	  }
+	  //HAL_UART_Transmit(&huart2, (int*) &buff, Size, HAL_MAX_DELAY);
+    osDelay(1);
+  }
+  /* USER CODE END Tx */
 }
 
 /* Private application code --------------------------------------------------*/

@@ -1,7 +1,8 @@
 #MicroXplorer Configuration settings - do not modify
 FREERTOS.FootprintOK=true
-FREERTOS.IPParameters=Tasks01,configUSE_NEWLIB_REENTRANT,FootprintOK
-FREERTOS.Tasks01=LED,0,128,blink,Default,NULL,Dynamic,NULL,NULL;myTask02,-3,128,StartTask02,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.IPParameters=Tasks01,configUSE_NEWLIB_REENTRANT,FootprintOK,Queues01
+FREERTOS.Queues01=QueueUART,16,uint16_t,0,Dynamic,NULL,NULL
+FREERTOS.Tasks01=LED,0,128,blink,Default,NULL,Dynamic,NULL,NULL;UART_Rx,-3,128,Rx,Default,NULL,Dynamic,NULL,NULL;UART_Tx,-3,128,Tx,Default,NULL,Dynamic,NULL,NULL
 FREERTOS.configUSE_NEWLIB_REENTRANT=1
 File.Version=6
 GPIO.groupedBy=Group By Peripherals
