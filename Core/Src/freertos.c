@@ -161,15 +161,22 @@ void Rx(void const * argument)
 {
   /* USER CODE BEGIN Rx */
 	char c;
+	uint8_t idx = 0;
 	memset(buf, 0, len);
   /* Infinite loop */
   for(;;)
   {
 	  //if something is on the UART RX you send it to Queue
-	  if(a==b){
+	  if(serial2.available() > 0){
+		  c = serial2.read();
+		  if(idx< len-1){
+			  buf[idx] = c;
+			  idx++;
+		  }
 		  if (xQueueSend(QueueUARTHandle, (void *)&buff, 10) != pdTRUE) {
 		              printf("ERROR: Could not put item on delay queue.");
 		            }
+		  xQueueSend(QueueUARTHandle, (void *)&buff,10);
 	  memset(buf, 0, len);
 	  }
 	  else{
@@ -195,7 +202,7 @@ void Tx(void const * argument)
   {
 	  if(xQueueReceive(&QueueUARTHandle, (void *)&buff, 0) == pdTRUE){
 		  delay = &buff;
-		  printf("Delay wynosi aktualnie %d\n", (int *)&buff);
+		  printf("Delay wynosi aktualnie %d\n", delay);
 	  }
 	  //HAL_UART_Transmit(&huart2, (int*) &buff, Size, HAL_MAX_DELAY);
     osDelay(1);
