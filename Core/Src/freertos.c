@@ -200,8 +200,7 @@ void Tx(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  if(xQueueReceive(&QueueUARTHandle, (void *)&buff, 0) == pdTRUE){
-		  delay = &buff;
+	  if(xQueueReceive(&QueueUARTHandle, (void *)&delay, 0) == pdTRUE){
 		  printf("Delay wynosi aktualnie %d\n", delay);
 	  }
 	  //HAL_UART_Transmit(&huart2, (int*) &buff, Size, HAL_MAX_DELAY);
